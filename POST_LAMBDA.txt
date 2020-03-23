@@ -1,0 +1,54 @@
+var AWS = require("aws-sdk");
+var querystring = require("querystring");
+var http = require("https");
+var parse = AWS.DynamoDB.Converter.output;
+exports.handler = function( event, context, callback ) {
+  var docClient = new AWS.DynamoDB.DocumentClient();
+  event.Records.forEach((record) => {
+  //  console.log("CORONAVIRUS");
+      
+       var event_name = record["eventName"];
+    if (event_name == "REMOVE") {
+      
+      //  console.log(record.eventID);
+      //  console.log(record.eventName);
+        var obj3 = parse({ "M": record.dynamodb.OldImage });
+           // console.log(obj3);
+            
+             var auth =
+   "Basic " +
+    new Buffer(
+      "[USER ID]" + ":" + "[USER PASSWORD]"
+    ).toString("base64");
+//  console.log(JSON.stringify(obj3));
+            
+  // An object of options to indicate where to post to
+  var post_options = {
+    host: "domains-connecteast1.stg-sessionm.com",
+    path: "/incentives/api/1.0/user_points/all_balances",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(JSON.stringify(obj3)), //TODO post_data
+      Authorization: auth
+    }
+  };
+   // Set up the request
+  var post_req = http.request(post_options, function(res) {
+    res.setEncoding("utf8");
+    res.on("data", function(chunk) {
+      console.log("Response: " + chunk);
+      context.succeed();
+    });
+    res.on("error", function(e) {
+      console.log("Got error: " + e.message);
+      context.done(null, "FAILURE");
+    });
+  });
+
+  // post the data
+  post_req.write(JSON.stringify(obj3)); //TODO post_data
+  post_req.end();}
+});
+
+}
